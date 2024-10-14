@@ -1,4 +1,4 @@
-from panoptes.pocs.camera.libasi import ASIDriver
+# from panoptes.pocs.camera.libasi import ASIDriver
 from panoptes.pocs.camera.zwo import Camera as ZWOCam
 
 
