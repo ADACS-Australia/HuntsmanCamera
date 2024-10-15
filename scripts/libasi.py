@@ -204,6 +204,9 @@ class ASIDriver(AbstractSDKDriver):
                                 camera_ID,
                                 ctypes.c_int(i),
                                 ctypes.byref(control_caps))
+            # print(control_caps)
+            # print(f'control_caps.control_type = {control_caps.control_type}')
+            # print(f'control_caps.name = {control_caps.name}')
             control = self._parse_caps(control_caps)
             controls[control['control_type']] = control
         self.logger.debug("Got details of {} controls from camera {}".format(n_controls, camera_ID))
@@ -546,8 +549,6 @@ class ASIDriver(AbstractSDKDriver):
 
     def _parse_caps(self, control_caps):
         """ Utility function to parse ControlCaps Structures into something more Pythonic """
-        print(control_caps)
-
         control_type = ControlType(control_caps.control_type).name
         control_info = {'name': control_caps.name.decode(),
                         'description': control_caps.description.decode(),
@@ -763,7 +764,13 @@ class ControlType(enum.IntEnum):
     FAN_ON = enum.auto()
     PATTERN_ADJUST = enum.auto()
     ANTI_DEW_HEATER = enum.auto()
-
+    ASI_FAN_ADJUST = enum.auto()
+    ASI_PWRLED_BRIGNT = enum.auto()
+    ASI_GPS_SUPPORT = enum.auto()
+    ASI_GPS_START_LINE = enum.auto()
+    ASI_GPS_END_LINE = enum.auto()
+    ASI_ROLLING_INTERVAL = enum.auto() # microsecond
+ 
     BRIGHTNESS = OFFSET
     AUTO_MAX_BRIGHTNESS = AUTO_TARGET_BRIGHTNESS
 
