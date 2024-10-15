@@ -1,4 +1,5 @@
 from typing import Final
+from astropy import units as u
 
 # local mended lib
 from libasi import ASIDriver
@@ -42,3 +43,20 @@ if __name__ == '__main__':
     controls = cam.get_control_caps(cam_id)
     print(f'Camera control caps {controls}')
 
+    supported_modes = cam.get_camera_supported_mode(cam_id)
+    print(f'Camera supported modes {supported_modes}')
+
+    roi_format = cam.get_roi_format(cam_id)
+    print(f'ROI format {roi_format}')
+
+    start_x, start_y = cam.get_start_position(cam_id)
+    print(f'ROI start X={start_x} Y={start_y}')
+
+    roi_format['image_type'] = 'RAW16'
+    roi_format['height'] = 1000 * u.pixel
+    roi_format['width'] = 1000 * u.pixel
+    print(f'ROI format {roi_format}')
+
+
+
+    
