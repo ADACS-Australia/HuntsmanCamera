@@ -1,0 +1,202 @@
+---
+######################### PANOPTES UNIT ########################################
+# name:   Can be anything you want it to be. This name is displayed in several
+#         places and should be a "personal" name for the unit.
+#
+# pan_id: This is an identification number assigned by the PANOPTES team and is
+#         the official designator for your unit. This id is used to store image
+#         files and communicate with the Google Cloud network.
+#
+#         Leave the pan_id at `PAN000` for testing until you have been assigned
+#         an official id. Update pocs_local.yaml with official name once received.
+################################################################################
+name: Testing PANOPTES Unit
+pan_id: ZWOVID
+
+pocs:
+  INITIALIZED: false
+  CONNECTED: false
+  INTERRUPTED: false
+location:
+  name: DFN lab
+  latitude: 31.5 deg
+  longitude: -115 deg
+  elevation: 20.0 m
+  horizon: 30 deg # targets must be above this to be considered valid.
+  flat_horizon: -6 deg # Flats when sun between this and focus horizon.
+  focus_horizon: -12 deg # Dark enough to focus on stars.
+  observe_horizon: -18 deg # Sun below this limit to observe.
+  obstructions: [ ]
+  timezone: Australia/Perth
+  gmt_offset: +480 # Offset in minutes from GMT during.
+  # standard time (not daylight saving).
+directories:
+  base: .
+  images: images
+  data: data
+  resources: resources/
+  fields: conf_files/fields
+  mounts: resources/mounts
+db:
+  name: panoptes_testing
+  type: file
+scheduler:
+  type: panoptes.pocs.scheduler.dispatch
+  fields_file: simulator.yaml
+  check_file: False
+mount:
+  brand: ioptron
+  model: cem40   #  ieq30pro
+  driver: panoptes.pocs.mount.ioptron.cem40  # Driver for mount
+  serial:
+    port: /dev/ttyUSB0
+    timeout: 0.
+    baudrate: 9600
+  non_sidereal_available: True
+pointing:
+  auto_correct: True
+  threshold: 500 # arcseconds ~ 50 pixels
+  exptime: 30 # seconds
+  max_iterations: 1
+cameras:
+  defaults:
+    primary: None
+    auto_detect: False
+    file_extension: fits
+    compress_fits: True
+    make_pretty_images: True
+    keep_jpgs: False
+    readout_time: 0.5  # seconds
+    timeout: 10  # seconds
+    filter_type: RGGB
+    cooling:
+      enabled: True
+      temperature:
+        target: 0  # celsius
+        tolerance: 0.1  # celsius
+      stable_time: 60  # seconds
+      check_interval: 5  # seconds
+      timeout: 300  # seconds
+    focuser:
+      enabled: True
+      autofocus_seconds: 0.1  # seconds
+      autofocus_size: 500  # seconds
+      autofocus_keep_files: False
+  devices:
+     # ZWO test camera DFN
+    - name: ASI1600MMPro
+      model: huntsman.pocs.camera.zwo
+      is_distributed: true
+      timeout: 60
+      serial_number: "1f2f190206070900"
+      target_temperature: 0
+      temperature_tolerance: 3
+      gain: 100
+      focuser:
+        model: huntsman.pocs.focuser.birger.Focuser
+        port: "/dev/ttyUSB0"
+        initial_position: 22340
+        autofocus_take_dark: true
+        autofocus_keep_files: false
+        autofocus_make_plots: true
+        autofocus_range:
+          - 96
+          - 300
+        autofocus_step:
+          - 8
+          - 25
+        autofocus_seconds: 5
+        autofocus_size: 1024
+      filterwheel:
+        model: huntsman.pocs.filterwheel.zwo.FilterWheel
+        serial_number: 4
+        filter_names:
+          - "blank"
+          - "luminance"
+          - "g_band"
+          - "r_band"
+          - "halpha"
+          - "s_II"
+          - "empty"
+        dark_position: "blank"
+        focus_offsets:
+          luminance: 0 # By definition
+          r_band: 34
+          g_band: 46
+          s_II: 0 # Needs to be updated
+          halpha: 0 # Needs to be updated
+	  
+
+########################## Observations ########################################
+# An observation folder contains a contiguous sequence of images of a target/field
+# recorded by a single camera, with no slewing of the mount during the sequence;
+# there may be tracking adjustments during the observation.
+#
+# An example folder structure would be:
+#
+#   $PANDIR/images/fields/Hd189733/14d3bd/20180901T120001/
+#
+# In this folder will be stored JPG and FITS images. A timelapse of the
+# observation can be made (one per camera) and the JPGs optionally removed
+# afterward.
+#
+# TODO: Add options for cleaning up old data (e.g. >30 days)
+################################################################################
+observations:
+  make_timelapse: True
+  record_observations: True
+
+######################## Google Network ########################################
+# By default all images are stored on googlecloud servers and we also
+# use a few google services to store metadata, communicate with servers, etc.
+#
+# See $PANDIR/panoptes/utils/google/README.md for details about authentication.
+#
+# Options to change:
+#   image_storage: If images should be uploaded to Google Cloud Storage.
+#   service_account_key: Location of the JSON service account key.
+################################################################################
+panoptes_network:
+  image_storage: True
+  service_account_key: # Location of JSON account key
+  project_id: panoptes-survey
+  buckets:
+    images: panoptes-survey
+
+#Enable to output POCS messages to social accounts
+# social_accounts:
+#     twitter:
+#         consumer_key: [your_consumer_key]
+#         consumer_secret: [your_consumer_secret]
+#         access_token: [your_access_token]
+#         access_token_secret: [your_access_token_secret]
+#     slack:
+#         webhook_url: [your_webhook_url]
+#         output_timestamp: False
+
+state_machine: panoptes
+
+######################### Environmental Sensors ################################
+# Configure the environmental sensors that are attached.
+#
+# Use `auto_detect: True` for most options. Or use a manual configuration:
+#
+#   camera_board:
+#       serial_port: /dev/ttyACM0
+#   control_board:
+#       serial_port: /dev/ttyACM1
+################################################################################
+environment:
+  auto_detect: True
+
+######################### Weather Station ######################################
+# Weather station options.
+#
+# Configure the serial_port as necessary.
+#
+# Default thresholds should be okay for most locations.
+################################################################################
+weather:
+  aag_cloud:
+    #        serial_port: '/dev/ttyUSB1'
+    serial_port: '/dev/ttyUSB1'
