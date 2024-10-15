@@ -1,5 +1,6 @@
+from libasi import ASIDriver
 # from panoptes.pocs.camera.libasi import ASIDriver
-from panoptes.pocs.camera.zwo import Camera as ZWOCam
+# from panoptes.pocs.camera.zwo import Camera as ZWOCam
 
 
 if __name__ == '__main__':
