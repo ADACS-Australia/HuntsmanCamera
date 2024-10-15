@@ -9,6 +9,7 @@ if __name__ == '__main__':
     cam = ASIDriver(**kwargs)
     ver = cam.get_SDK_version()
     print(f'SDK Version is {ver}')
-    
-    # cam = ZWOCam(**kwargs)
+    cams = cam.get_devices()
+    print(f'Devices {cams}')
 
+    # cam = ZWOCam(**kwargs)
