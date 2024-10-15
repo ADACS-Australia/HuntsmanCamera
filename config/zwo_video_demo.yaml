@@ -125,7 +125,6 @@ cameras:
           g_band: 46
           s_II: 0 # Needs to be updated
           halpha: 0 # Needs to be updated
-	  
 
 ########################## Observations ########################################
 # An observation folder contains a contiguous sequence of images of a target/field
