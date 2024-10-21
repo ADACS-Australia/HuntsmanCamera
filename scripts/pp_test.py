@@ -45,8 +45,9 @@ if __name__ == '__main__':
     print(f'Camera control caps {controls}')
 
     supported_modes = cam.get_camera_supported_mode(cam_id)
+    print(f'Number of camera supported modes: {len(supported_modes)}')
     print(f'Camera supported modes {supported_modes}')
-
+    
     print(f'ROI and offset full frame')
 
     ff_roi_format = cam.get_roi_format(cam_id)
@@ -92,6 +93,16 @@ if __name__ == '__main__':
     print(f'Exposure_time={exp_time}')
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
     print(f'read back exposure_time [int]={exp_time_us_int}')
+    
+    
+    ### TODO
+    # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
+	# ASISetControlValue(CamInfo.CameraID,ASI_HIGH_SPEED_MODE, 0, ASI_FALSE);
+    bw_overload = cam.get_control_value(cam_id, 'BANDWIDTHOVERLOAD')
+    print(f'bandwidth overload = {bw_overload}')
+    hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
+    print(f'High speed mode = {hs_mode}')
+
     
     num_frames = 20
     frames_count = 0
