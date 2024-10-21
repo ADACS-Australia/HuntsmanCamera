@@ -310,7 +310,7 @@ class ASIDriver(AbstractSDKDriver):
         self._call_function('ASIGetDroppedFrames',
                             camera_ID,
                             ctypes.byref(n_dropped_frames))
-        self.logger_debug("Camera {} has dropped {} frames.".format(camera_ID, n_dropped_frames))
+        self.logger.debug("Camera {} has dropped {} frames.".format(camera_ID, n_dropped_frames))
         return n_dropped_frames
 
     def enable_dark_subtract(self, camera_ID, dark_file_path):
