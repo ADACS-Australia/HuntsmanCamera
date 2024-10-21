@@ -4,6 +4,7 @@ import numpy as np
 import time
 
 from panoptes.utils.images import fits as fits_utils
+from panoptes.utils.utils import get_quantity_value
     
 # local mended lib
 from libasi import ASIDriver
@@ -69,23 +70,28 @@ if __name__ == '__main__':
     #roi_format['image_type'] = 'RAW16'
     #roi_format['height'] = sq_crop
     #roi_format['width'] = sq_crop
-    # cam.set_roi_format(cam_id, size_pix_x, size_pix_y, 1, 'RAW16')
+    cam.set_roi_format(cam_id, size_pix_x, size_pix_y, 1, 'RAW16')
     roi_format = cam.get_roi_format(cam_id)
     print(f'ROI format {roi_format}')
     
     x = ff_roi_format['width']/2 - size_pix_x/2
     y = ff_roi_format['height']/2 - size_pix_y/2
-    # cam.set_start_position(cam_id, x, y)
+    cam.set_start_position(cam_id, x, y)
     start_x, start_y = cam.get_start_position(cam_id)
     print(f'ROI start X={start_x} Y={start_y}')
+    start_x_int = int(get_quantity_value(start_x, unit=u.pix))
+    start_y_int = int(get_quantity_value(start_y, unit=u.pix))
 
     cam.set_control_value(cam_id, 'GAIN', 100)
     gain = cam.get_control_value(cam_id, 'GAIN')
     print(f'Gain={gain}')
     # exposure is in uS
-    cam.set_control_value(cam_id, 'EXPOSURE', 40000)
+    exposure_time = 50000
+    cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     print(f'Exposure_time={exp_time}')
+    exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
+    print(f'read back exposure_time [int]={exp_time_us_int}')
     
     num_frames = 20
     frames_count = 0
@@ -99,7 +105,9 @@ if __name__ == '__main__':
     while frames_count < num_frames:
         # timeout 500 is from Dale's example
         filename = str(f'frame{frames_count:06d}.fits')
-        header = { 'FILE': filename, 'TEST': True }
+        header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
+                   'START_X': start_x_int, 'START_Y': start_y_int
+                 }
         fits_utils.write_fits(data, header, filename, overwrite=True)
         frames_count += 1
 
@@ -107,9 +115,6 @@ if __name__ == '__main__':
         
     cam.stop_video_capture(cam_id)
 
-    dropped_frames = cam.get_dropped_frames(cam_id)
-    print(f"Number of dropped frames: {dropped_frames}")
-    
     elapsed_time = end_time - start_time
     print(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
     
