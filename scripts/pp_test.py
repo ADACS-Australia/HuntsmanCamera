@@ -12,7 +12,7 @@ from libasi import ASIDriver
 # from panoptes.pocs.camera.zwo import Camera as ZWOCam
 
 DFN_ASI1600MMPro_SN: Final[str] = '1f2f190206070900'
-
+JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
 
 if __name__ == '__main__':
     kwargs = {}   
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     gain = cam.get_control_value(cam_id, 'GAIN')
     print(f'Gain={gain}')
     # exposure is in uS
-    exposure_time = 50000
+    exposure_time = 40000
     cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     print(f'Exposure_time={exp_time}')
@@ -109,7 +109,6 @@ if __name__ == '__main__':
     cam.start_video_capture(cam_id)
     
     # create memory bufer to read out and save frames
-    data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], 'RAW16', 500)
         
     start_time = time.perf_counter()
     
@@ -119,7 +118,11 @@ if __name__ == '__main__':
         header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
                    'START_X': start_x_int, 'START_Y': start_y_int
                  }
-        fits_utils.write_fits(data, header, filename, overwrite=True)
+        data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], 'RAW16', 500)
+        if data is not None:
+            fits_utils.write_fits(data, header, filename, overwrite=True)
+        else:
+            print("No data.")
         frames_count += 1
 
     end_time = time.perf_counter()
@@ -128,6 +131,7 @@ if __name__ == '__main__':
 
     elapsed_time = end_time - start_time
     print(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
+    print(f"Measured FPS {frames_count/elapsed_time:.2f} seconds")
     
     dropped_frames = cam.get_dropped_frames(cam_id)
     print(f"Number of dropped frames: {dropped_frames}")
