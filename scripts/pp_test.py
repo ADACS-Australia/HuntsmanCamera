@@ -13,6 +13,8 @@ from libasi import ASIDriver
 
 DFN_ASI1600MMPro_SN: Final[str] = '1f2f190206070900'
 JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
+# Other Huntsman camera serial numbers are in 
+# repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
 if __name__ == '__main__':
     kwargs = {}   
