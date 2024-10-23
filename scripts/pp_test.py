@@ -2,6 +2,7 @@ from typing import Final
 from astropy import units as u
 import numpy as np
 import time
+from datetime import datetime, timezone
 
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -96,7 +97,6 @@ if __name__ == '__main__':
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
     print(f'read back exposure_time [int]={exp_time_us_int}')
     
-    
     ### TODO
     # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
 	# ASISetControlValue(CamInfo.CameraID,ASI_HIGH_SPEED_MODE, 0, ASI_FALSE);
@@ -112,17 +112,32 @@ if __name__ == '__main__':
     
     # create memory bufer to read out and save frames
         
+    start_datetime = datetime.now(timezone.utc)
     start_time = time.perf_counter()
-    
+    frame_start_datetime = start_datetime
+    frame_start_time = start_time
+        
     while frames_count < num_frames:
         # timeout 500 is from Dale's example
-        filename = str(f'frame{frames_count:06d}.fits')
-        header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
-                   'START_X': start_x_int, 'START_Y': start_y_int
-                 }
         data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], 'RAW16', 500)
+        frame_got_data_time = time.perf_counter()
+        frame_end_datetime = datetime.now(timezone.utc) 
         if data is not None:
+            filename = str(f'frame{frames_count:06d}.fits')
+            start_date = frame_start_datetime.replace(microsecond=int((frame_start_time % 1) * 1e6))
+            end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
+            iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
+            iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
+            print(f'ISO frame start: {iso_start_date}  end: {iso_end_date}')
+            header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
+                       'START_X': start_x_int, 'START_Y': start_y_int,
+                       'DATE-OBS': iso_start_date,
+                       'DATE-STA': iso_start_date,
+                       'DATE-END': iso_end_date
+                     }
             fits_utils.write_fits(data, header, filename, overwrite=True)
+            frame_start_time = frame_got_data_time
+            frame_start_datetime = frame_end_datetime
         else:
             print("No data.")
         frames_count += 1
