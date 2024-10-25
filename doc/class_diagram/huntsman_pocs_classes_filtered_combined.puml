@@ -1,0 +1,194 @@
+@startuml
+
+class RemoteArchiver {
+}
+
+class Observation {
+}
+
+class NotTwilightError {
+}
+
+class PyroNameServerNotFound {
+}
+
+class HuntsmanPOCS {
+}
+
+class NotSafeError {
+}
+
+class DitheredField {
+}
+
+class SunAvoidance {
+}
+
+class zwo.Camera {
+}
+
+class pyro.client.Camera {
+}
+
+class Guide {
+}
+
+class AbstractField {
+}
+
+class Altitude {
+}
+
+class POCS.Altitude {
+}
+
+class BiasObservation {
+}
+
+class CameraGroup {
+}
+
+class MoonAvoidance {
+}
+
+class POCS.MoonAvoidance {
+}
+
+class PyroError {
+}
+
+class Mount {
+}
+
+class FlatFieldObservation {
+}
+
+class Focuser {
+}
+
+class HuntsmanFocuser {
+}
+
+class Dome {
+}
+
+class HuntsmanObservatory {
+}
+
+class NoDarksDuringTwilightError {
+}
+
+class CompoundField {
+}
+
+class FilterWheel {
+}
+
+class pyro.service.CameraService {
+}
+
+class RemoteEvent {
+}
+
+class PyroProxyError {
+}
+
+class CompoundObservation {
+}
+
+class AutofocusSequence {
+}
+
+class AbstractHuntsmanCamera {
+}
+
+class DarkObservation {
+}
+
+class DitheredObservation {
+}
+
+class Archiver {
+}
+
+class POCS.ASIDriver {
+}
+
+class POCS.AbstratcSDKDriver {
+}
+
+class POCS.AbstractCamera {
+}
+
+class POCS.AbstractSDKCamera {
+}
+
+PanBase <|-- Observatory
+PanBase <|-- AbstractFocuser
+PanBase <|-- AbstractDome
+PanBase <|-- POCS.AbstractCamera
+PanBase <|-- AbstractFilterWheel
+PanBase <|-- POCS
+AbstractFilterWheel <|-- ZWOFilterWheel
+PanBase <|-- AbstractMount
+AbstractMount <|-- SimulatorMount
+AbstractMount <|-- BisqueMount
+
+PanBase <|-- BaseConstraint
+BaseConstraint <|-- POCS.Altitude
+POCS.Altitude <|-- Altitude
+
+BaseConstraint <|-- POCS.MoonAvoidance
+POCS.MoonAvoidance <|-- MoonAvoidance
+
+BaseConstraint <|-- SunAvoidance
+
+POCS <|-- HuntsmanPOCS
+PanError <|-- NotTwilightError
+PanError <|-- NoDarksDuringTwilightError
+PanError <|-- NotSafeError
+Observatory <|-- HuntsmanObservatory
+HuntsmanObservatory --> CameraGroup
+PanBase <|-- Guide
+Guide --> TheSkyX
+BisqueMount <|-- Mount
+SimulatorMount <|-- Mount
+AbstractDome <|-- Dome
+PanBase <|-- AutofocusSequence
+PanError <|-- PyroError
+PyroError <|-- PyroNameServerNotFound
+PyroError <|-- PyroProxyError
+threading.Event <|-- RemoteEvent
+ZWOFilterWheel <|-- FilterWheel
+FilterWheel --> threading.Event
+AbstractFilterWheel <|-- FilterWheel
+FilterWheel --> RemoteEvent
+PanBase <|-- AbstractField
+AbstractField <|-- CompoundField
+CompoundField <|-- DitheredField
+
+Observation <|-- DarkObservation
+Observation <|-- BiasObservation
+PanBase <|-- AbstractObservation
+AbstractObservation <|-- Observation
+AbstractObservation <|-- CompoundObservation
+CompoundObservation <|-- DitheredObservation
+DitheredObservation <|-- FlatFieldObservation
+PanBase <|-- Archiver
+AbstractFocuser <|-- Focuser
+AbstractFocuser <|-- HuntsmanFocuser
+POCS.AbstractCamera <|-- AbstractHuntsmanCamera
+POCS.AbstractCamera <|-- POCS.AbstractSDKCamera
+POCS.AbstractSDKCamera <|-- zwo.Camera
+
+PanBase <|-- CameraGroup
+AbstractHuntsmanCamera <|-- zwo.Camera
+AbstractHuntsmanCamera <|-- pyro.client.Camera
+pyro.client.Camera --> ThreadPoolExecutor
+pyro.client.Camera --> RemoteEvent
+pyro.client.Camera --> PyroFocuser
+pyro.client.Camera --> PyroFilterWheel
+pyro.service.CameraService --> threading.Event
+Archiver <|-- RemoteArchiver
+
+@enduml
