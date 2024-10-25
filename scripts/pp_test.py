@@ -2,6 +2,7 @@ from typing import Final
 from astropy import units as u
 import numpy as np
 import time
+from datetime import datetime, timezone
 
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -12,11 +13,16 @@ from libasi import ASIDriver
 # from panoptes.pocs.camera.zwo import Camera as ZWOCam
 
 DFN_ASI1600MMPro_SN: Final[str] = '1f2f190206070900'
+JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
 
+CAM_SN: Final[str] = DFN_ASI1600MMPro_SN
+
+# Other Huntsman camera serial numbers are in 
+# repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
 if __name__ == '__main__':
     kwargs = {}   
-    kwargs['serial_number'] = DFN_ASI1600MMPro_SN
+    kwargs['serial_number'] = CAM_SN
     
     # cam = ZWOCam(**kwargs)
     
@@ -30,7 +36,7 @@ if __name__ == '__main__':
     ids = cam.get_product_ids()
     # print(f'Product IDs {ids}')
     
-    cam_id = cameras[DFN_ASI1600MMPro_SN] 
+    cam_id = cameras[CAM_SN] 
     
     cam.open_camera(cam_id)
     cam.init_camera(cam_id)
@@ -68,16 +74,13 @@ if __name__ == '__main__':
     size_y = sq_crop
     size_pix_x = size_x * u.pixel
     size_pix_y = size_y * u.pixel
-    #roi_format['image_type'] = 'RAW16'
-    #roi_format['height'] = sq_crop
-    #roi_format['width'] = sq_crop
-    cam.set_roi_format(cam_id, size_pix_x, size_pix_y, 1, 'RAW16')
+    #cam.set_roi_format(cam_id, size_pix_x, size_pix_y, 1, 'RAW16')
     roi_format = cam.get_roi_format(cam_id)
     print(f'ROI format {roi_format}')
     
     x = ff_roi_format['width']/2 - size_pix_x/2
     y = ff_roi_format['height']/2 - size_pix_y/2
-    cam.set_start_position(cam_id, x, y)
+    #cam.set_start_position(cam_id, x, y)
     start_x, start_y = cam.get_start_position(cam_id)
     print(f'ROI start X={start_x} Y={start_y}')
     start_x_int = int(get_quantity_value(start_x, unit=u.pix))
@@ -87,13 +90,12 @@ if __name__ == '__main__':
     gain = cam.get_control_value(cam_id, 'GAIN')
     print(f'Gain={gain}')
     # exposure is in uS
-    exposure_time = 50000
+    exposure_time = 40000
     cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     print(f'Exposure_time={exp_time}')
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
     print(f'read back exposure_time [int]={exp_time_us_int}')
-    
     
     ### TODO
     # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
@@ -104,22 +106,40 @@ if __name__ == '__main__':
     print(f'High speed mode = {hs_mode}')
 
     
-    num_frames = 20
+    num_frames = 120
     frames_count = 0
     cam.start_video_capture(cam_id)
     
     # create memory bufer to read out and save frames
-    data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], 'RAW16', 500)
         
+    start_datetime = datetime.now(timezone.utc)
     start_time = time.perf_counter()
-    
+    frame_start_datetime = start_datetime
+    frame_start_time = start_time
+        
     while frames_count < num_frames:
         # timeout 500 is from Dale's example
-        filename = str(f'frame{frames_count:06d}.fits')
-        header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
-                   'START_X': start_x_int, 'START_Y': start_y_int
-                 }
-        fits_utils.write_fits(data, header, filename, overwrite=True)
+        data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], 'RAW16', 500)
+        frame_got_data_time = time.perf_counter()
+        frame_end_datetime = datetime.now(timezone.utc) 
+        if data is not None:
+            filename = str(f'frame{frames_count:06d}.fits')
+            start_date = frame_start_datetime.replace(microsecond=int((frame_start_time % 1) * 1e6))
+            end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
+            iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
+            iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
+            print(f'ISO frame start: {iso_start_date}  end: {iso_end_date}')
+            header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
+                       'START_X': start_x_int, 'START_Y': start_y_int,
+                       'DATE-OBS': iso_start_date,
+                       'DATE-STA': iso_start_date,
+                       'DATE-END': iso_end_date
+                     }
+            fits_utils.write_fits(data, header, filename, overwrite=True)
+            frame_start_time = frame_got_data_time
+            frame_start_datetime = frame_end_datetime
+        else:
+            print("No data.")
         frames_count += 1
 
     end_time = time.perf_counter()
@@ -128,6 +148,7 @@ if __name__ == '__main__':
 
     elapsed_time = end_time - start_time
     print(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
+    print(f"Measured FPS: {frames_count/elapsed_time:.2f}")
     
     dropped_frames = cam.get_dropped_frames(cam_id)
     print(f"Number of dropped frames: {dropped_frames}")
