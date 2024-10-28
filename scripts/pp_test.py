@@ -3,6 +3,7 @@ from astropy import units as u
 import numpy as np
 import time
 from datetime import datetime, timezone, timedelta
+import multiprocessing
 
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -19,6 +20,18 @@ CAM_SN: Final[str] = DFN_ASI1600MMPro_SN
 
 # Other Huntsman camera serial numbers are in 
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
+
+def write_file_thread(data, header, filename):
+    fits_utils.write_fits(data, header, filename, overwrite=True)
+    # The thread will automatically exit when this function completes
+
+
+def spawn_file_write(data, header, filename):
+    process = multiprocessing.Process(target=write_file_process, args=(data, header, filename))
+    process.daemon = True
+    process.start()
+    # The process will run independently
+
 
 if __name__ == '__main__':
     kwargs = {}   
@@ -73,39 +86,54 @@ if __name__ == '__main__':
 
     print(f'----- Camera config set and read back -----')
     
+    # activate HW binning
     cam.set_control_value(cam_id, 'HARDWARE_BIN', True)
     hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
     print(f'Hardware binning={hw_bin}')
 
-    
     # set and print ROI and offset
+
+    # binning 2x2 is HW - this is the only one that makes sense for speed-up
+    # binning 3x3 is SW
+    # binning 4x4 is HW (2x2) + SW (second time 2x2) 
     binning = 2
+    
+    # ROI - crop size
     sq_crop = 400
     size_x = sq_crop
     size_y = sq_crop
     size_pix_x = size_x * u.pixel
     size_pix_y = size_y * u.pixel
-    cam.set_roi_format(cam_id, size_pix_x, size_pix_y, binning, 'RAW16')
-    roi_format = cam.get_roi_format(cam_id)
-    print(f'ROI format {roi_format}')
+    print(f"size_pix_x={size_pix_x}")
+    print(ff_roi_format['width'])
+    # cam.set_roi_format(cam_id, size_pix_x, size_pix_y, binning, 'RAW16')
+    cam.set_roi_format(cam_id, 
+                       ff_roi_format['width']/binning, 
+                       ff_roi_format['height']/binning, 
+                       binning, 'RAW16')
     
-    x = ff_roi_format['width']/2 - size_pix_x/2
-    y = ff_roi_format['height']/2 - size_pix_y/2
+    roi_format = cam.get_roi_format(cam_id)
+    print(f'ROI format {roi_format}')    
+    
+    # ROI - crop offset (start)
+    #x = ff_roi_format['width']/2 - size_pix_x/2
+    #y = ff_roi_format['height']/2 - size_pix_y/2
     # x = (x / 4) * 4
     # y = (y / 4) * 4
     y = 400
     x = 400
+    print(f'Try to set ROI start X={x} Y={y}')
     cam.set_start_position(cam_id, x, y)
     start_x, start_y = cam.get_start_position(cam_id)
     print(f'ROI start X={start_x} Y={start_y}')
     start_x_int = int(get_quantity_value(start_x, unit=u.pix))
     start_y_int = int(get_quantity_value(start_y, unit=u.pix))
-
+    
     cam.set_control_value(cam_id, 'GAIN', 100)
     gain = cam.get_control_value(cam_id, 'GAIN')
     print(f'Gain={gain}')
     # exposure is in uS
-    exposure_time = 40000
+    exposure_time = 20000
     cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     print(f'Exposure_time={exp_time}')
@@ -120,7 +148,7 @@ if __name__ == '__main__':
     hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
     print(f'High speed mode = {hs_mode}')
 
-    num_frames = 10
+    num_frames = 200
     frames_count = 0
     cam.start_video_capture(cam_id)
     
@@ -150,7 +178,8 @@ if __name__ == '__main__':
                        'DATE-STA': iso_start_date,
                        'DATE-END': iso_end_date
                      }
-            fits_utils.write_fits(data, header, filename, overwrite=True)
+            # fits_utils.write_fits(data, header, filename, overwrite=True)
+            write_file_thread(data, header, filename)
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
