@@ -180,6 +180,11 @@ AbstractFocuser <|-- HuntsmanFocuser
 POCS.AbstractCamera <|-- AbstractHuntsmanCamera
 POCS.AbstractCamera <|-- POCS.AbstractSDKCamera
 POCS.AbstractSDKCamera <|-- zwo.Camera
+POCS.AbstractSDKCamera <|-- POCS.zwo.Camera
+
+PanBase <|-- POCS.AbstratcSDKDriver
+POCS.AbstratcSDKDriver <|-- POCS.ASIDriver
+POCS.AbstractSDKCamera --> POCS.AbstratcSDKDriver
 
 PanBase <|-- CameraGroup
 AbstractHuntsmanCamera <|-- zwo.Camera
