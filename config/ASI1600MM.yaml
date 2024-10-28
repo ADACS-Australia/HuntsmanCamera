@@ -1,0 +1,24 @@
+cameras:
+  devices:
+    - name: "DFN_ASI1600MM"
+      # 4656 x 3520
+      #model: huntsman.pocs.camera.zwo
+      serial_number: "1f2f190206070900"
+      target_temperature: 0
+      temperature_tolerance: 3
+      gain: 100
+      num_frames: 10
+      # exposure time in microseconds
+      exposure_time: 20000
+      # RAW8 (default) or RAW16
+      image_type: "RAW16"
+      # crop parameters
+      use_crop: True
+      size_x: 800
+      size_y: 800
+      start_x: 400
+      start_y: 400
+      output_folder: "."
+      # pixel binning - HW binning 1 (=none) or 2
+      pix_binning: 1
+
