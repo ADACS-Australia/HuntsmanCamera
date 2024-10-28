@@ -2,7 +2,7 @@ from typing import Final
 from astropy import units as u
 import numpy as np
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -67,20 +67,35 @@ if __name__ == '__main__':
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     print(f'Exposure_time={exp_time}')
 
+    hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
+    print(f'Hardware binning={hw_bin}')
+
+
     print(f'----- Camera config set and read back -----')
+    
+    cam.set_control_value(cam_id, 'HARDWARE_BIN', True)
+    hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
+    print(f'Hardware binning={hw_bin}')
+
+    
     # set and print ROI and offset
-    sq_crop = 1000
+    binning = 2
+    sq_crop = 400
     size_x = sq_crop
     size_y = sq_crop
     size_pix_x = size_x * u.pixel
     size_pix_y = size_y * u.pixel
-    #cam.set_roi_format(cam_id, size_pix_x, size_pix_y, 1, 'RAW16')
+    cam.set_roi_format(cam_id, size_pix_x, size_pix_y, binning, 'RAW16')
     roi_format = cam.get_roi_format(cam_id)
     print(f'ROI format {roi_format}')
     
     x = ff_roi_format['width']/2 - size_pix_x/2
     y = ff_roi_format['height']/2 - size_pix_y/2
-    #cam.set_start_position(cam_id, x, y)
+    # x = (x / 4) * 4
+    # y = (y / 4) * 4
+    y = 400
+    x = 400
+    cam.set_start_position(cam_id, x, y)
     start_x, start_y = cam.get_start_position(cam_id)
     print(f'ROI start X={start_x} Y={start_y}')
     start_x_int = int(get_quantity_value(start_x, unit=u.pix))
@@ -95,7 +110,7 @@ if __name__ == '__main__':
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     print(f'Exposure_time={exp_time}')
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
-    print(f'read back exposure_time [int]={exp_time_us_int}')
+    print(f'Read back exposure_time [int]={exp_time_us_int}')
     
     ### TODO
     # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
@@ -105,8 +120,7 @@ if __name__ == '__main__':
     hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
     print(f'High speed mode = {hs_mode}')
 
-    
-    num_frames = 120
+    num_frames = 10
     frames_count = 0
     cam.start_video_capture(cam_id)
     
@@ -125,7 +139,8 @@ if __name__ == '__main__':
         if data is not None:
             filename = str(f'frame{frames_count:06d}.fits')
             start_date = frame_start_datetime.replace(microsecond=int((frame_start_time % 1) * 1e6))
-            end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
+            end_date = start_date + timedelta(microseconds=exposure_time)
+            # end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             print(f'ISO frame start: {iso_start_date}  end: {iso_end_date}')
