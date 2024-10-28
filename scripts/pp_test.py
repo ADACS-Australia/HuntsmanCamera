@@ -4,6 +4,8 @@ import numpy as np
 import time
 from datetime import datetime, timezone, timedelta
 import multiprocessing
+import argparse
+import yaml
 
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -21,6 +23,11 @@ CAM_SN: Final[str] = DFN_ASI1600MMPro_SN
 # Other Huntsman camera serial numbers are in 
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
+def load_yaml_config(file_path):
+    with open(file_path, 'r') as file:
+        return yaml.safe_load(file)
+
+
 def write_file_thread(data, header, filename):
     fits_utils.write_fits(data, header, filename, overwrite=True)
     # The thread will automatically exit when this function completes
@@ -33,7 +40,26 @@ def spawn_file_write(data, header, filename):
     # The process will run independently
 
 
-if __name__ == '__main__':
+def main():   
+    parser = argparse.ArgumentParser(description='Camera configuration script')
+    parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
+    
+    args = parser.parse_args()
+    
+    # Load the YAML configuration
+    config = load_yaml_config(args.config)
+    
+    # Now you can access the configuration data
+    cameras = config.get('cameras', {})
+    devices = cameras.get('devices', [])
+    
+    for device in devices:
+        print(f"Camera: {device['name']}")
+        print(f"Serial Number: {device['serial_number']}")
+        print(f"Exposure Time: {device['exposure_time']}")
+        # ... and so on for other parameters
+        print("---")
+        
     kwargs = {}   
     kwargs['serial_number'] = CAM_SN
     
@@ -148,7 +174,7 @@ if __name__ == '__main__':
     hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
     print(f'High speed mode = {hs_mode}')
 
-    num_frames = 200
+    num_frames = 20
     frames_count = 0
     cam.start_video_capture(cam_id)
     
@@ -196,6 +222,9 @@ if __name__ == '__main__':
     
     dropped_frames = cam.get_dropped_frames(cam_id)
     print(f"Number of dropped frames: {dropped_frames}")
-    
 
+
+if __name__ == '__main__':
+    main()
+    
     
