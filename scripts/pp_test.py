@@ -89,7 +89,7 @@ def main():
     ids = cam.get_product_ids()
     logger.debug(f'Product IDs {ids}')
     
-    cam_id = cameras[CAM_SN] 
+    cam_id = cameras[device['serial_number']] 
     cam.open_camera(cam_id)
     cam.init_camera(cam_id)
     
