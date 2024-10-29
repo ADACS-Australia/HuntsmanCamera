@@ -6,6 +6,8 @@ from datetime import datetime, timezone, timedelta
 import multiprocessing
 import argparse
 import yaml
+import logging
+import os
 
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -23,6 +25,19 @@ CAM_SN: Final[str] = DFN_ASI1600MMPro_SN
 # Other Huntsman camera serial numbers are in 
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
+def setup_logger(debug=False):
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(level=level, format='%(asctime)s - %(levelname)s - %(message)s')
+    return logging.getLogger(__name__)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Example script with logging')
+    parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
+    return parser.parse_args()
+
+
 def load_yaml_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
@@ -34,19 +49,19 @@ def write_file_thread(data, header, filename):
 
 
 def spawn_file_write(data, header, filename):
-    process = multiprocessing.Process(target=write_file_process, args=(data, header, filename))
+    process = multiprocessing.Process(target=write_file_process, 
+                                      args=(data, header, filename))
     process.daemon = True
     process.start()
     # The process will run independently
 
 
-def main():   
-    parser = argparse.ArgumentParser(description='Camera configuration script')
-    parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
-    
-    args = parser.parse_args()
+def main():
+    args = parse_args()   
+    logger = setup_logger(args.debug)
     
     # Load the YAML configuration
+    logger.info(f"Loading configuration from: {args.config}")
     config = load_yaml_config(args.config)
     
     # Now you can access the configuration data
@@ -54,127 +69,122 @@ def main():
     devices = cameras.get('devices', [])
     
     for device in devices:
-        print(f"Camera: {device['name']}")
-        print(f"Serial Number: {device['serial_number']}")
-        print(f"Exposure Time: {device['exposure_time']}")
-        # ... and so on for other parameters
-        print("---")
+        logger.info(f"Camera: {device['name']}")
+        # print(f"Serial Number: {device['serial_number']}")
+        # print(f"Exposure Time: {device['exposure_time']}")
+        for key, value in device.items():
+            if key != 'name':
+                logger.info(f"  {key}: {value}")
         
     kwargs = {}   
-    kwargs['serial_number'] = CAM_SN
-    
-    # cam = ZWOCam(**kwargs)
-    
+    kwargs['serial_number'] = device['serial_number']
+        
     cam = ASIDriver(**kwargs)
     ver = cam.get_SDK_version()
-    print(f'SDK Version is {ver}')
+    logger.info(f'SDK Version is {ver}')
     
     cameras = cam.get_devices()
-    print(f'Devices {cameras}')
+    logger.debug(f'Devices {cameras}')
     
     ids = cam.get_product_ids()
-    # print(f'Product IDs {ids}')
+    logger.debug(f'Product IDs {ids}')
     
     cam_id = cameras[CAM_SN] 
-    
     cam.open_camera(cam_id)
     cam.init_camera(cam_id)
     
     info = cam.get_camera_property(cam_id)
-    print(f'Camera info: {info}')
+    logger.info(f'Camera info: {info}')
 
     n_controls = cam.get_num_of_controls(cam_id)
-    print(f'n_controls {n_controls}')
+    logger.debug(f'Number of controls {n_controls}')
 
     controls = cam.get_control_caps(cam_id)
-    print(f'Camera control caps {controls}')
+    logger.debug(f'Camera control caps {controls}')
 
     supported_modes = cam.get_camera_supported_mode(cam_id)
-    print(f'Number of camera supported modes: {len(supported_modes)}')
-    print(f'Camera supported modes {supported_modes}')
+    logger.debug(f'Number of camera supported modes: {len(supported_modes)}')
+    logger.debug(f'Camera supported modes {supported_modes}')
     
-    print(f'ROI and offset full frame')
+    logger.debug(f'Original ROI and offset full frame')
 
     ff_roi_format = cam.get_roi_format(cam_id)
-    print(f'ROI format {ff_roi_format}')
+    logger.debug(f'ROI format {ff_roi_format}')
 
     ff_start_x, ff_start_y = cam.get_start_position(cam_id)
-    print(f'ROI start X={ff_start_x} Y={ff_start_y}')
+    logger.debug(f'ROI start X = {ff_start_x} Y = {ff_start_y}')
 
     gain = cam.get_control_value(cam_id, 'GAIN')
-    print(f'Gain={gain}')
+    logger.debug(f'Gain={gain}')
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
-    print(f'Exposure_time={exp_time}')
+    logger.debug(f'Exposure_time={exp_time}')
 
     hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
-    print(f'Hardware binning={hw_bin}')
+    logger.debug(f'Hardware binning={hw_bin}')
 
 
-    print(f'----- Camera config set and read back -----')
+    logger.info(f'----- Camera configuration and read back to verify -----')
     
     # activate HW binning
     cam.set_control_value(cam_id, 'HARDWARE_BIN', True)
     hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
-    print(f'Hardware binning={hw_bin}')
+    logger.info(f'Hardware binning={hw_bin}')
 
     # set and print ROI and offset
 
     # binning 2x2 is HW - this is the only one that makes sense for speed-up
     # binning 3x3 is SW
     # binning 4x4 is HW (2x2) + SW (second time 2x2) 
-    binning = 2
+    binning = device['pix_binning']
     
-    # ROI - crop size
-    sq_crop = 400
-    size_x = sq_crop
-    size_y = sq_crop
-    size_pix_x = size_x * u.pixel
-    size_pix_y = size_y * u.pixel
-    print(f"size_pix_x={size_pix_x}")
-    print(ff_roi_format['width'])
-    # cam.set_roi_format(cam_id, size_pix_x, size_pix_y, binning, 'RAW16')
-    cam.set_roi_format(cam_id, 
-                       ff_roi_format['width']/binning, 
-                       ff_roi_format['height']/binning, 
-                       binning, 'RAW16')
+    # RAW8 or RAW16 for monochrome cameras
+    img_type = device['image_type']
+    
+    if device['use_crop']:
+        # ROI - crop size
+        size_x = device['size_x']
+        size_y = device['size_y']
+        size_pix_x = size_x * u.pixel
+        size_pix_y = size_y * u.pixel
+        cam.set_roi_format(cam_id, size_pix_x, size_pix_y, binning, img_type)
+        # ROI - offset 
+        start_x = device['start_x']
+        start_y = device['start_y']
+        logger.debug(f'Try to set ROI start X={start_x} Y={start_y}')
+        cam.set_start_position(cam_id, start_x, start_y)
+    else:
+        cam.set_roi_format(cam_id,
+                           ff_roi_format['width']/binning,
+                           ff_roi_format['height']/binning,
+                           binning, 'RAW16')
     
     roi_format = cam.get_roi_format(cam_id)
-    print(f'ROI format {roi_format}')    
-    
-    # ROI - crop offset (start)
-    #x = ff_roi_format['width']/2 - size_pix_x/2
-    #y = ff_roi_format['height']/2 - size_pix_y/2
-    # x = (x / 4) * 4
-    # y = (y / 4) * 4
-    y = 400
-    x = 400
-    print(f'Try to set ROI start X={x} Y={y}')
-    cam.set_start_position(cam_id, x, y)
+    logger.info(f'ROI format {roi_format}')
     start_x, start_y = cam.get_start_position(cam_id)
-    print(f'ROI start X={start_x} Y={start_y}')
+    logger.info(f'ROI start X={start_x} Y={start_y}')
     start_x_int = int(get_quantity_value(start_x, unit=u.pix))
     start_y_int = int(get_quantity_value(start_y, unit=u.pix))
     
-    cam.set_control_value(cam_id, 'GAIN', 100)
+    gain = device['gain']
+    cam.set_control_value(cam_id, 'GAIN', gain)
     gain = cam.get_control_value(cam_id, 'GAIN')
-    print(f'Gain={gain}')
-    # exposure is in uS
-    exposure_time = 20000
-    cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
-    exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
-    print(f'Exposure_time={exp_time}')
-    exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
-    print(f'Read back exposure_time [int]={exp_time_us_int}')
+    logger.info(f'Gain={gain}')
     
-    ### TODO
+    # exposure is in uS
+    exposure_time = device['exposure_time']
+    cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
+    exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
+    logger.info(f'Exposure_time [int]={exp_time_us_int}')
+    
+    ### TODO - check this? or leave defaults?
     # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
 	# ASISetControlValue(CamInfo.CameraID,ASI_HIGH_SPEED_MODE, 0, ASI_FALSE);
     bw_overload = cam.get_control_value(cam_id, 'BANDWIDTHOVERLOAD')
-    print(f'bandwidth overload = {bw_overload}')
+    logger.debug(f'bandwidth overload = {bw_overload}')
     hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
-    print(f'High speed mode = {hs_mode}')
+    logger.debug(f'High speed mode = {hs_mode}')
 
-    num_frames = 20
+    num_frames = device['num_frames']
     frames_count = 0
     cam.start_video_capture(cam_id)
     
@@ -184,6 +194,8 @@ def main():
     start_time = time.perf_counter()
     frame_start_datetime = start_datetime
     frame_start_time = start_time
+        
+    output_folder = device['output_folder']
         
     while frames_count < num_frames:
         # timeout 500 is from Dale's example
@@ -197,7 +209,7 @@ def main():
             # end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
-            print(f'ISO frame start: {iso_start_date}  end: {iso_end_date}')
+            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}')
             header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
                        'START_X': start_x_int, 'START_Y': start_y_int,
                        'DATE-OBS': iso_start_date,
@@ -205,23 +217,27 @@ def main():
                        'DATE-END': iso_end_date
                      }
             # fits_utils.write_fits(data, header, filename, overwrite=True)
-            write_file_thread(data, header, filename)
+            full_path = os.path.join(output_folder, filename)
+            write_file_thread(data, header, full_path)
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
-            print("No data.")
+            logger.error("No data.")
         frames_count += 1
 
+    if filename is not None:
+        logger.info(f'last frame file name: {full_path}')
+        
     end_time = time.perf_counter()
         
     cam.stop_video_capture(cam_id)
 
     elapsed_time = end_time - start_time
-    print(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
-    print(f"Measured FPS: {frames_count/elapsed_time:.2f}")
+    logger.info(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
+    logger.info(f"Measured FPS: {frames_count/elapsed_time:.2f}")
     
     dropped_frames = cam.get_dropped_frames(cam_id)
-    print(f"Number of dropped frames: {dropped_frames}")
+    logger.info(f"Number of dropped frames: {dropped_frames}")
 
 
 if __name__ == '__main__':
