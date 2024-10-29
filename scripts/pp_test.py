@@ -156,8 +156,8 @@ def main():
         size_x_int = int(get_quantity_value(ff_roi_format['width'], unit=u.pix))
         size_y_int = int(get_quantity_value(ff_roi_format['height'], unit=u.pix))
         cam.set_roi_format(cam_id,
-                           ((size_x_int / binning) // 4) * 4,
-                           ((size_y_int / binning) // 4) * 4,
+                           ((size_x_int / binning) // 8) * 8,
+                           ((size_y_int / binning) // 8) * 8,
                            binning, img_type)
     
     roi_format = cam.get_roi_format(cam_id)
