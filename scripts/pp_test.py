@@ -154,8 +154,8 @@ def main():
         cam.set_start_position(cam_id, start_x, start_y)
     else:
         cam.set_roi_format(cam_id,
-                           ff_roi_format['width']/binning,
-                           ff_roi_format['height']/binning,
+                           ((ff_roi_format['width'] / binning) // 4) * 4,
+                           ((ff_roi_format['height'] / binning) // 4) * 4,
                            binning, 'RAW16')
     
     roi_format = cam.get_roi_format(cam_id)
