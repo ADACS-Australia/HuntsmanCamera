@@ -1,6 +1,6 @@
 from typing import Final
 from astropy import units as u
-import numpy as np
+# import numpy as np
 import time
 from datetime import datetime, timezone, timedelta
 import multiprocessing
@@ -20,8 +20,6 @@ from libasi import ASIDriver
 DFN_ASI1600MMPro_SN: Final[str] = '1f2f190206070900'
 JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
 
-CAM_SN: Final[str] = DFN_ASI1600MMPro_SN
-
 # Other Huntsman camera serial numbers are in 
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
@@ -32,7 +30,7 @@ def setup_logger(debug=False):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Example script with logging')
+    parser = argparse.ArgumentParser(description='ZWO ASI camera video record demo script')
     parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
     return parser.parse_args()
@@ -43,7 +41,7 @@ def load_yaml_config(file_path):
         return yaml.safe_load(file)
 
 
-def write_file_thread(data, header, filename):
+def write_file_process(data, header, filename):
     fits_utils.write_fits(data, header, filename, overwrite=True)
     # The thread will automatically exit when this function completes
 
@@ -53,7 +51,7 @@ def spawn_file_write(data, header, filename):
                                       args=(data, header, filename))
     process.daemon = True
     process.start()
-    # The process will run independently
+    # The process will run independently and disappear when ends
 
 
 def main():
@@ -68,31 +66,33 @@ def main():
     cameras = config.get('cameras', {})
     devices = cameras.get('devices', [])
     
+    # print config to log
     for device in devices:
         logger.info(f"Camera: {device['name']}")
-        # print(f"Serial Number: {device['serial_number']}")
-        # print(f"Exposure Time: {device['exposure_time']}")
         for key, value in device.items():
             if key != 'name':
                 logger.info(f"  {key}: {value}")
         
     kwargs = {}   
     kwargs['serial_number'] = device['serial_number']
-        
     cam = ASIDriver(**kwargs)
+
+    # libasi.py might need to be updated for later ZWO SDK versions
+    # this was tested with V1.33 and V1.29
     ver = cam.get_SDK_version()
     logger.info(f'SDK Version is {ver}')
-    
+
     cameras = cam.get_devices()
     logger.debug(f'Devices {cameras}')
-    
+
     ids = cam.get_product_ids()
     logger.debug(f'Product IDs {ids}')
-    
+
     cam_id = cameras[device['serial_number']] 
     cam.open_camera(cam_id)
     cam.init_camera(cam_id)
-    
+
+    # read and print initial camera configs
     info = cam.get_camera_property(cam_id)
     logger.info(f'Camera info: {info}')
 
@@ -190,9 +190,7 @@ def main():
     num_frames = device['num_frames']
     frames_count = 0
     cam.start_video_capture(cam_id)
-    
-    # create memory bufer to read out and save frames
-        
+
     start_datetime = datetime.now(timezone.utc)
     start_time = time.perf_counter()
     frame_start_datetime = start_datetime
@@ -219,26 +217,27 @@ def main():
                        'DATE-STA': iso_start_date,
                        'DATE-END': iso_end_date
                      }
-            # fits_utils.write_fits(data, header, filename, overwrite=True)
             full_path = os.path.join(output_folder, filename)
-            write_file_thread(data, header, full_path)
+            fits_utils.write_fits(data, header, full_path, overwrite=True)
+            # ### using multiprocessing to write file in a side thread is not really faster
+            # spawn_file_write(data, header, full_path)
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
             logger.error("No data.")
         frames_count += 1
 
-    if filename is not None:
-        logger.info(f'last frame file name: {full_path}')
-        
     end_time = time.perf_counter()
-        
+
     cam.stop_video_capture(cam_id)
 
+    if filename is not None:
+        logger.info(f'last frame file name: {full_path}')    
+    
     elapsed_time = end_time - start_time
     logger.info(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
     logger.info(f"Measured FPS: {frames_count/elapsed_time:.2f}")
-    
+
     dropped_frames = cam.get_dropped_frames(cam_id)
     logger.info(f"Number of dropped frames: {dropped_frames}")
 
