@@ -7,9 +7,9 @@ cameras:
       target_temperature: 0
       temperature_tolerance: 3
       gain: 100
-      num_frames: 10
+      num_frames: 60
       # exposure time in microseconds
-      exposure_time: 10000
+      exposure_time: 45000
       # RAW8 (default) or RAW16
       image_type: "RAW16"
       # crop parameters
