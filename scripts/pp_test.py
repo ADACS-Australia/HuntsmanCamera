@@ -175,6 +175,7 @@ def main():
     # exposure is in uS
     exposure_time = device['exposure_time']
     cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
+    exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
     logger.info(f'Exposure_time [int]={exp_time_us_int}')
     
