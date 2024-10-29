@@ -18,6 +18,7 @@ cameras:
       size_y: 800
       start_x: 400
       start_y: 400
+      # output_folder: "/mnt/fast/home/mcu/ZWO_data"
       output_folder: "."
       # pixel binning - HW binning 1 (=none) or 2
       pix_binning: 2
