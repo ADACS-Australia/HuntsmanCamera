@@ -153,10 +153,12 @@ def main():
         logger.debug(f'Try to set ROI start X={start_x} Y={start_y}')
         cam.set_start_position(cam_id, start_x, start_y)
     else:
+        size_x_int = int(get_quantity_value(ff_roi_format['width'], unit=u.pix))
+        size_y_int = int(get_quantity_value(ff_roi_format['height'], unit=u.pix))
         cam.set_roi_format(cam_id,
-                           ((ff_roi_format['width'] / binning) // 4) * 4,
-                           ((ff_roi_format['height'] / binning) // 4) * 4,
-                           binning, 'RAW16')
+                           ((size_x_int / binning) // 4) * 4,
+                           ((size_y_int / binning) // 4) * 4,
+                           binning, img_type)
     
     roi_format = cam.get_roi_format(cam_id)
     logger.info(f'ROI format {roi_format}')
@@ -199,7 +201,7 @@ def main():
         
     while frames_count < num_frames:
         # timeout 500 is from Dale's example
-        data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], 'RAW16', 500)
+        data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], img_type, 500)
         frame_got_data_time = time.perf_counter()
         frame_end_datetime = datetime.now(timezone.utc) 
         if data is not None:
