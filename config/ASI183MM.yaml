@@ -1,9 +1,9 @@
 cameras:
   devices:
-    - name: "DFN_ASI1600MM"
+    - name: "Huntsman_jetson09_ASI193MM"
       # 4656 x 3520
       #model: huntsman.pocs.camera.zwo
-      serial_number: "1f2f190206070900"
+      serial_number: "0e2c420013090900"
       target_temperature: 0
       temperature_tolerance: 3
       gain: 100
@@ -21,4 +21,3 @@ cameras:
       output_folder: "."
       # pixel binning - HW binning 1 (=none) or 2
       pix_binning: 2
-
