@@ -95,6 +95,9 @@ def main():
     # read and print initial camera configs
     info = cam.get_camera_property(cam_id)
     logger.info(f'Camera info: {info}')
+    
+    camera_name = info['name']
+    pixel_size = get_quantity_value(info['pixel_size'], unit=u.um)
 
     n_controls = cam.get_num_of_controls(cam_id)
     logger.debug(f'Number of controls {n_controls}')
@@ -153,8 +156,8 @@ def main():
         logger.debug(f'Try to set ROI start X={start_x} Y={start_y}')
         cam.set_start_position(cam_id, start_x, start_y)
     else:
-        size_x_int = int(get_quantity_value(ff_roi_format['width'], unit=u.pix))
-        size_y_int = int(get_quantity_value(ff_roi_format['height'], unit=u.pix))
+        size_x_int = int(get_quantity_value(info['max_width'], unit=u.pix))
+        size_y_int = int(get_quantity_value(info['max_height'], unit=u.pix))
         cam.set_roi_format(cam_id,
                            ((size_x_int / binning) // 8) * 8,
                            ((size_y_int / binning) // 8) * 8,
@@ -171,21 +174,34 @@ def main():
     cam.set_control_value(cam_id, 'GAIN', gain)
     gain = cam.get_control_value(cam_id, 'GAIN')
     logger.info(f'Gain={gain}')
+    gain = int(gain[0])
     
     # exposure is in uS
     exposure_time = device['exposure_time']
     cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
+    logger.debug(f'Exposure_time = {exp_time}')
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
-    logger.info(f'Exposure_time [int]={exp_time_us_int}')
+    logger.info(f'Exposure_time [int] = {exp_time_us_int}')
     
     ### TODO - check this? or leave defaults?
     # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
 	# ASISetControlValue(CamInfo.CameraID,ASI_HIGH_SPEED_MODE, 0, ASI_FALSE);
     bw_overload = cam.get_control_value(cam_id, 'BANDWIDTHOVERLOAD')
-    logger.debug(f'bandwidth overload = {bw_overload}')
+    logger.debug(f'Bandwidth overload = {bw_overload}')
     hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
     logger.debug(f'High speed mode = {hs_mode}')
+
+    cam.set_control_value(cam_id, 'TARGET_TEMP', device['target_temperature'])
+    target_temp = cam.get_control_value(cam_id, 'TARGET_TEMP')
+    logger.debug(f'Target temperature = {target_temp}')
+    target_temp_float = get_quantity_value(target_temp[0], unit=u.deg_C)
+    logger.info(f'Target temperature [float] = {target_temp_float}')
+    
+    cam.set_control_value(cam_id, 'COOLER_ON', True)
+    cooler_on = cam.get_control_value(cam_id, 'COOLER_ON')
+    logger.info(f'Cooler status = {cooler_on}')
+    
 
     num_frames = device['num_frames']
     frames_count = 0
@@ -199,6 +215,9 @@ def main():
     output_folder = device['output_folder']
         
     while frames_count < num_frames:
+        temp = cam.get_control_value(cam_id, 'TEMPERATURE')
+        temp_C = temp[0] / 10.0
+        
         # timeout 500 is from Dale's example
         data = cam.get_video_data(cam_id, roi_format['width'], roi_format['height'], img_type, 500)
         frame_got_data_time = time.perf_counter()
@@ -206,16 +225,31 @@ def main():
         if data is not None:
             filename = str(f'frame{frames_count:06d}.fits')
             start_date = frame_start_datetime.replace(microsecond=int((frame_start_time % 1) * 1e6))
-            end_date = start_date + timedelta(microseconds=exposure_time)
+            end_date = start_date + timedelta(microseconds=exp_time_us_int)
+            exp_time = exp_time_us_int / 1e6
             # end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
-            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}')
-            header = { 'FILE': filename, 'TEST': True, 'EXPTIME': exp_time_us_int,
-                       'START_X': start_x_int, 'START_Y': start_y_int,
+            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}')
+            header = { 'FILE': filename, 
+                       'TEST': True, 
+                       'EXPTIME': exp_time,
+                       'EXPOSURE': exp_time,
+                       'EXPOINUS': exp_time_us_int,
+                       'START_X': start_x_int,
+                       'START_Y': start_y_int,
                        'DATE-OBS': iso_start_date,
                        'DATE-STA': iso_start_date,
-                       'DATE-END': iso_end_date
+                       'DATE-END': iso_end_date,
+                       'XBINNING': binning,
+                       'YBINNING': binning,
+                       'GAIN': gain,
+                       'BAYERPAT': 'NONE',
+                       'COLORTYP': img_type,
+                       'INSTRUME': camera_name,
+                       'XPIXSZ': pixel_size,
+                       'YPIXSZ': pixel_size,
+                       'CCD_TEMP': get_quantity_value(temp_C, unit=u.deg_C)
                      }
             full_path = os.path.join(output_folder, filename)
             fits_utils.write_fits(data, header, full_path, overwrite=True)
