@@ -1,0 +1,24 @@
+cameras:
+  devices:
+    - name: "Huntsman_jetson005_ASI193MM"
+      # 4656 x 3520
+      #model: huntsman.pocs.camera.zwo
+      serial_number: "2d194b0013090900"
+      target_temperature: 0
+      temperature_tolerance: 3
+      gain: 100
+      num_frames: 60
+      # exposure time in microseconds
+      exposure_time: 45000
+      # RAW8 (default) or RAW16
+      image_type: "RAW16"
+      # crop parameters
+      use_crop: False
+      size_x: 800
+      size_y: 800
+      start_x: 400
+      start_y: 400
+      # output_folder: "/mnt/fast/home/mcu/ZWO_data"
+      output_folder: "."
+      # pixel binning - HW binning 1 (=none) or 2
+      pix_binning: 2
