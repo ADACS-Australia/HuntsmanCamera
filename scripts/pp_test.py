@@ -9,7 +9,8 @@ import yaml
 import logging
 import os
 
-from panoptes.utils.images import fits as fits_utils
+#from panoptes.utils.images import fits as fits_utils
+import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
     
 # local mended lib
@@ -33,6 +34,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ZWO ASI camera video record demo script')
     parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
+    parser.add_argument('-C', '--compress', action='store_true', help='Enable FITS compression')
     return parser.parse_args()
 
 
@@ -252,7 +254,9 @@ def main():
                        'CCD_TEMP': get_quantity_value(temp_C, unit=u.deg_C)
                      }
             full_path = os.path.join(output_folder, filename)
-            fits_utils.write_fits(data, header, full_path, overwrite=True)
+            fits_utils.write_fits(data, header, full_path, 
+                                  overwrite=True,
+                                  compress=args.compress)
             # ### using multiprocessing to write file in a side thread is not really faster
             # spawn_file_write(data, header, full_path)
             frame_start_time = frame_got_data_time
