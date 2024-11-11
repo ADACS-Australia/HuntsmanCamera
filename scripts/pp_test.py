@@ -9,6 +9,8 @@ import yaml
 import logging
 import os
 
+import fitsio
+
 #from panoptes.utils.images import fits as fits_utils
 import fits as fits_utils
 from panoptes.utils.utils import get_quantity_value
@@ -43,14 +45,17 @@ def load_yaml_config(file_path):
         return yaml.safe_load(file)
 
 
-def write_file_process(data, header, filename):
-    fits_utils.write_fits(data, header, filename, overwrite=True)
+def write_file_process(data, header, filename, compress):
+    ### using panoptes.utils.images.fits as fits_utils
+    # fits_utils.write_fits(data, header, filename, overwrite=True, compress=compress)
+    ### using fitsio wrapper fro cfitsio
+    fitsio.write(filename, data, header=header, compress=compress, clobber=True)
     # The thread will automatically exit when this function completes
 
 
-def spawn_file_write(data, header, filename):
+def spawn_file_write(data, header, filename, compress):
     process = multiprocessing.Process(target=write_file_process, 
-                                      args=(data, header, filename))
+                                      args=(data, header, filename, compress))
     process.daemon = True
     process.start()
     # The process will run independently and disappear when ends
@@ -254,11 +259,25 @@ def main():
                        'CCD_TEMP': get_quantity_value(temp_C, unit=u.deg_C)
                      }
             full_path = os.path.join(output_folder, filename)
-            fits_utils.write_fits(data, header, full_path, 
-                                  overwrite=True,
-                                  compress=args.compress)
+
+            ### using panoptes.utils.images.fits as fits_utils
+            # fits_utils.write_fits(data, header, full_path, 
+            #                      overwrite=True,
+            #                      compress=args.compress)
             # ### using multiprocessing to write file in a side thread is not really faster
-            # spawn_file_write(data, header, full_path)
+            # spawn_file_write(data, header, full_path, compress=args.compress)
+            
+            ### using fitsio wrapper fro cfitsio
+            # clobber=True is overwrite
+            if args.compress: 
+                compress = 'GZIP'
+            else:
+                compress = None
+            # fitsio.write(full_path, data, header=header, compress=compress, clobber=True)
+
+            # ### using multiprocessing to write file in a side thread is not really faster
+            spawn_file_write(data, header, full_path, compress)
+            
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
