@@ -45,5 +45,5 @@ modify camera serial number etc in yaml and use the script
 ```
 cd scripts
 python3 pp_test.py -h
-python3 pp_test.py -d -c config/ASI183MM_jetson005.yaml
+python3 pp_test.py -d -c ../config/ASI183MM_jetson005.yaml
 ```
