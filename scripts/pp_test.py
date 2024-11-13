@@ -41,9 +41,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ZWO ASI camera video record demo script')
     parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
-    parser.add_argument('-C', '--compress', type=str, default=False, required=False, 
+    parser.add_argument('-C', '--compress', type=str, default=None, required=False, 
                         nargs='?', const='RICE',
-                        help='Enable FITS compression (RICE, GZIP, PLIO, False, True=RICE)')
+                        help='Enable FITS compression (RICE, GZIP, PLIO, None)')
     return parser.parse_args()
 
 
