@@ -41,7 +41,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ZWO ASI camera video record demo script')
     parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
-    parser.add_argument('-C', '--compress', action='store_true', help='Enable FITS compression')
+    parser.add_argument('-C', '--compress', type=str, default=False, required=False, 
+                        nargs='?', const='RICE',
+                        help='Enable FITS compression (RICE, GZIP, PLIO, False, True=RICE)')
     return parser.parse_args()
 
 
@@ -74,6 +76,8 @@ def main():
     # Load the YAML configuration
     logger.info(f"Loading configuration from: {args.config}")
     config = load_yaml_config(args.config)
+    
+    logger.info(f"Use compression: {args.compress}")  
     
     # Now you can access the configuration data
     cameras = config.get('cameras', {})
@@ -280,18 +284,13 @@ def main():
             # ### using multiprocessing to write file in a side thread is not really faster
             # spawn_file_write(data, header, full_path, compress=args.compress)
             
-            ### using fitsio wrapper fro cfitsio
-            # clobber=True is overwrite
-            if args.compress: 
-                compress = 'GZIP'
-            else:
-                compress = None
+            ### using fitsio wrapper for cfitsio
+            # clobber=True is to overwrite existing files
             # fitsio.write(full_path, data, header=header, compress=compress, clobber=True)
 
             # ### using multiprocessing to write file in a side thread is not really faster
-            spawn_file_write(data, header, full_path, compress)
+            spawn_file_write(data, header, full_path, args.compress)
             
-            # logger.info(f'{frames_count}, ')
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
