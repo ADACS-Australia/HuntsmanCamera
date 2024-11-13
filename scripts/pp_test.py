@@ -291,7 +291,7 @@ def main():
             # ### using multiprocessing to write file in a side thread is not really faster
             spawn_file_write(data, header, full_path, compress)
             
-            logger.info(f'{frames_count}, ')
+            # logger.info(f'{frames_count}, ')
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
