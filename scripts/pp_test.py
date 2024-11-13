@@ -26,6 +26,11 @@ JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
 # Other Huntsman camera serial numbers are in 
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
+# A global list of processes, to be able to wait for all frames 
+# to be written to files.
+processes = []
+
+
 def setup_logger(debug=False):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -58,6 +63,7 @@ def spawn_file_write(data, header, filename, compress):
                                       args=(data, header, filename, compress))
     process.daemon = True
     process.start()
+    processes.append(process)
     # The process will run independently and disappear when ends
 
 
@@ -212,6 +218,13 @@ def main():
 
     num_frames = device['num_frames']
     frames_count = 0
+    logger.info(f'Starting to capture {num_frames} frames')
+    
+    import resource
+
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    logger.info(f"Files open soft limit: {soft}, hard limit: {hard}")
+    
     cam.start_video_capture(cam_id)
 
     start_datetime = datetime.now(timezone.utc)
@@ -278,6 +291,7 @@ def main():
             # ### using multiprocessing to write file in a side thread is not really faster
             spawn_file_write(data, header, full_path, compress)
             
+            logger.info(f'{frames_count}, ')
             frame_start_time = frame_got_data_time
             frame_start_datetime = frame_end_datetime
         else:
@@ -290,9 +304,15 @@ def main():
 
     if filename is not None:
         logger.info(f'last frame file name: {full_path}')    
+
+    # Wait for all processes to complete
+    for process in processes:
+        process.join()
+
+    logger.info(f"All file writing processes have completed.")
     
     elapsed_time = end_time - start_time
-    logger.info(f"Recorded {frames_count} frames, elapsed time: {elapsed_time:.6f} seconds")
+    logger.info(f"Recorded {frames_count} frames, elapsed capture time: {elapsed_time:.6f} seconds")
     logger.info(f"Measured FPS: {frames_count/elapsed_time:.2f}")
 
     dropped_frames = cam.get_dropped_frames(cam_id)
