@@ -244,7 +244,8 @@ def main():
     frame_start_time = start_time
 
     output_folder = device['output_folder']
-
+    entered_loop = False
+            
     while frames_count < num_frames:
         temp = cam.get_control_value(cam_id, 'TEMPERATURE')
         temp_C = temp[0] / 10.0
@@ -299,8 +300,10 @@ def main():
                 # ### using multiprocessing to write file in a side thread is not really faster
                 # only spin up MAX_PROCESSES
                 while len(processes) > MAX_PROCESSES:
-                    print('#')
-                    time.sleep(exp_time / 1e6)                    
+                    entered_loop = True
+                    print('#', end='')
+                    processes = [p for p in processes if p.is_alive()]
+                    time.sleep(exp_time / 1e6)
                 spawn_file_write(data, header, full_path, args.compress, processes)
             else:
                 fitsio.write(full_path, data, header=header, compress=args.compress, clobber=True)
@@ -314,6 +317,10 @@ def main():
     end_time = time.perf_counter()
 
     cam.stop_video_capture(cam_id)
+    
+    # wrap line if printed any '#' characters for limiting number or processes
+    if entered_loop:
+        print('')
 
     if filename is not None:
         logger.info(f'last frame file name: {full_path}')
