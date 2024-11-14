@@ -23,9 +23,10 @@ from libasi import ASIDriver
 
 DFN_ASI1600MMPro_SN: Final[str] = '1f2f190206070900'
 JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
-
 # Other Huntsman camera serial numbers are in
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
+
+MAX_PROCESSES: Final[int] = 500
 
 # A global list of processes, to be able to wait for all frames
 # to be written to files.
@@ -293,7 +294,10 @@ def main():
 
             if args.parallel_write:
                 # ### using multiprocessing to write file in a side thread is not really faster
-                spawn_file_write(data, header, full_path, args.compress)
+                while len(processes) > MAX_PROCESSES:
+                    print('#')
+                    time.sleep(exp_time / 1e6)                    
+                spawn_file_write(data, header, full_path, args.compress, processes)
             else:
                 fitsio.write(full_path, data, header=header, compress=args.compress, clobber=True)
 
