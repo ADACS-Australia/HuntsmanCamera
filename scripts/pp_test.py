@@ -259,8 +259,8 @@ def main():
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}')
-            header = { 'FILE': filename, 
-                       'TEST': True, 
+            header = { 'FILE': filename,
+                       'TEST': True,
                        'EXPTIME': exp_time,
                        'EXPOSURE': exp_time,
                        'EXPOINUS': exp_time_us_int,
