@@ -8,10 +8,13 @@ import argparse
 import yaml
 import logging
 import os
+import resource
 
-# fitsio provides way better performance for FITS compression
+# fitsio (wrapper for NASA cfitsio) provides way better performance
+# for FITS compression
 import fitsio
 # from panoptes.utils.images import fits as fits_utils
+# ### locally modified copy of panoptes fits_utils with compression added
 # import fits as fits_utils
 
 from panoptes.utils.utils import get_quantity_value
@@ -27,11 +30,6 @@ JETSON009_ASI178_SN: Final[str] = '0e2c420013090900'
 # repo huntsman-config$ /conf_files/pocs/huntsman.yaml
 
 MAX_PROCESSES: Final[int] = 500
-
-# A global list of processes, to be able to wait for all frames
-# to be written to files.
-processes = []
-
 
 def setup_logger(debug=False):
     level = logging.DEBUG if debug else logging.INFO
@@ -56,20 +54,22 @@ def load_yaml_config(file_path):
 
 
 def write_file_process(data, header, filename, compress):
-    ### using panoptes.utils.images.fits as fits_utils
+    # ## using panoptes.utils.images.fits as fits_utils
     # fits_utils.write_fits(data, header, filename, overwrite=True, compress=compress)
-    ### using fitsio wrapper fro cfitsio
+    # ## using fitsio wrapper for cfitsio
     fitsio.write(filename, data, header=header, compress=compress, clobber=True)
     # The thread will automatically exit when this function completes
 
 
-def spawn_file_write(data, header, filename, compress):
+def spawn_file_write(data, header, filename, compress, processes):
     process = multiprocessing.Process(target=write_file_process, 
                                       args=(data, header, filename, compress))
     process.daemon = True
     process.start()
     processes.append(process)
     # The process will run independently and disappear when ends
+    # There is also unfinished processes collecting loop at the end of capture
+    # otherwise not all the frames would be written
 
 
 def main():
@@ -207,9 +207,9 @@ def main():
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
     logger.info(f'Exposure_time [int] = {exp_time_us_int}')
 
-    ### check this? or leave defaults?
+    # ## check this? or leave defaults?
     # ASISetControlValue(CamInfo.CameraID,ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE); //low transfer speed
-	# ASISetControlValue(CamInfo.CameraID,ASI_HIGH_SPEED_MODE, 0, ASI_FALSE);
+    # ASISetControlValue(CamInfo.CameraID,ASI_HIGH_SPEED_MODE, 0, ASI_FALSE);
     bw_overload = cam.get_control_value(cam_id, 'BANDWIDTHOVERLOAD')
     logger.debug(f'Bandwidth overload = {bw_overload}')
     hs_mode = cam.get_control_value(cam_id, 'HIGH_SPEED_MODE')
@@ -229,10 +229,12 @@ def main():
     frames_count = 0
     logger.info(f'Starting to capture {num_frames} frames')
 
-    import resource
-
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     logger.info(f"Files open soft limit: {soft}, hard limit: {hard}")
+
+    # A list of processes, to be able to wait for all frames
+    # to be written to files.
+    processes = []
 
     cam.start_video_capture(cam_id)
 
@@ -260,7 +262,8 @@ def main():
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}')
-            header = { 'FILE': filename,
+            header = {
+                       'FILE': filename,
                        'TEST': True,
                        'EXPTIME': exp_time,
                        'EXPOSURE': exp_time,
@@ -282,18 +285,19 @@ def main():
                      }
             full_path = os.path.join(output_folder, filename)
 
-            ### using panoptes.utils.images.fits as fits_utils
-            # fits_utils.write_fits(data, header, full_path, 
+            # ## using panoptes.utils.images.fits as fits_utils
+            # fits_utils.write_fits(data, header, full_path,
             #                      overwrite=True,
             #                      compress=args.compress)
-            # ### using multiprocessing to write file in a side thread is not really faster
-            # spawn_file_write(data, header, full_path, compress=args.compress)
+            # ## using multiprocessing to write file in a side thread is not really faster
+            #    unless compression is used
+            # spawn_file_write(data, header, full_path, compress=args.compress, processes)
 
-            ### using fitsio wrapper for cfitsio
-            # clobber=True is to overwrite existing files
-
+            # ## using fitsio wrapper for cfitsio
+            #    clobber=True is to overwrite existing files
             if args.parallel_write:
                 # ### using multiprocessing to write file in a side thread is not really faster
+                # only spin up MAX_PROCESSES
                 while len(processes) > MAX_PROCESSES:
                     print('#')
                     time.sleep(exp_time / 1e6)                    
@@ -312,7 +316,7 @@ def main():
     cam.stop_video_capture(cam_id)
 
     if filename is not None:
-        logger.info(f'last frame file name: {full_path}')    
+        logger.info(f'last frame file name: {full_path}')
 
     elapsed_time = end_time - start_time
     logger.info(f"Recorded {frames_count} frames, elapsed capture time: {elapsed_time:.6f} seconds")
