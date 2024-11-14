@@ -34,7 +34,7 @@ sudo apt install libbz2-dev
 pip install fitsio
 ```
 
-The panoptes-config-server is not needed - alreay running
+The panoptes-config-server is not needed on Hunstan's Jetsons - alreay running
 ```
 # /home/mcu/conda/envs/huntsman/bin/panoptes-config-server run --config-file config/zwo_video_demo.yaml
 ```
