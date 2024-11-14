@@ -19,14 +19,19 @@ wget -q "${CONDA_URL}" -O install-miniforge.sh
 "${HOME}/conda/bin/conda" init
 exit
 ```
-Login again and create conda nevironment
+Login again and create conda environment
 
 ```
 ssh mcu@192.168.80.209
 conda create -y -q -n huntsman python=3.9 mamba
 conda activate huntsman
 pip install panoptes-pocs
-pip install matplotlib 
+pip install matplotlib
+```
+For compression, fitsio package is needed, and as it builds binary wheel of cfistio, one needs to install some OS lib for dependance:
+```
+sudo apt install libbz2-dev
+pip install fitsio
 ```
 
 The panoptes-config-server is not needed - alreay running
