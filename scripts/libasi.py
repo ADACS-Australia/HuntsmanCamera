@@ -225,7 +225,13 @@ class ASIDriver(AbstractSDKDriver):
         return nice_value, bool(is_auto)
 
     def set_control_value(self, camera_ID, control_type, value):
-        """ Sets the value of the control control_type on camera with given integet ID """
+        """ Sets the value of the control control_type on camera with given integer ID """
+        # Martin C note: Let's stick with the original interface in panoptes/POCS.
+        # That means ASI library API function is stripped of the direct auto bool parameter.
+        # One then sets the value followed by an extra code line that sets it to be 'AUTO'.
+        # Example:
+        #   cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
+        #   cam.set_control_value(cam_id, 'EXPOSURE', 'AUTO')
         if value == 'AUTO':
             # Apparently need to pass current value when turning auto on
             auto = True
