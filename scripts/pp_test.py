@@ -41,7 +41,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ZWO ASI camera video record demo script')
     parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
-    parser.add_argument('-p', '--parallel_write', action='store_true', help='write files in parallel with multiprocessing')
+    parser.add_argument('-p', '--parallel_write', action='store_true', help='Write files in parallel with multiprocessing')
+    parser.add_argument('-a', '--auto_exptime', action='store_true', help='Enable automatic exposure time mode')
     parser.add_argument('-C', '--compress', type=str, default=None, required=False, 
                         nargs='?', const='RICE',
                         help='Enable FITS compression (RICE, GZIP, PLIO, None)')
@@ -84,6 +85,9 @@ def main():
 
     if args.parallel_write:
         logger.info(f"Write files in parallel threads")
+        
+    if args.auto_exptime:
+        logger.info(f"Enable automatic exposure time mode")
 
     # Now you can access the configuration data
     cameras = config.get('cameras', {})
@@ -95,6 +99,9 @@ def main():
         for key, value in device.items():
             if key != 'name':
                 logger.info(f"  {key}: {value}")
+
+    # Take the 1st camera device
+    device = devices[0]
 
     kwargs = {}
     kwargs['serial_number'] = device['serial_number']
@@ -143,8 +150,8 @@ def main():
     gain = cam.get_control_value(cam_id, 'GAIN')
     logger.debug(f'Gain={gain}')
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
-    logger.debug(f'Exposure_time={exp_time}')
-
+    logger.debug(f'Exposure_time = {exp_time})')
+    
     hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
     logger.debug(f'Hardware binning={hw_bin}')
 
@@ -202,8 +209,10 @@ def main():
     # exposure is in uS
     exposure_time = device['exposure_time']
     cam.set_control_value(cam_id, 'EXPOSURE', exposure_time)
+    if args.auto_exptime:
+        cam.set_control_value(cam_id, 'EXPOSURE', 'AUTO')
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
-    logger.debug(f'Exposure_time = {exp_time}')
+    logger.info(f'Exposure_time = {exp_time}')
     exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
     logger.info(f'Exposure_time [int] = {exp_time_us_int}')
 
@@ -262,7 +271,9 @@ def main():
             # end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
-            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}')
+            exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
+            exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
+            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}  ExpTime: {exp_time_us_int}]')
             header = {
                        'FILE': filename,
                        'TEST': True,
@@ -332,6 +343,9 @@ def main():
     dropped_frames = cam.get_dropped_frames(cam_id)
     logger.info(f"Number of dropped frames: {dropped_frames}")
 
+    exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
+    logger.info(f'Exposure_time = {exp_time}')
+    
     if args.parallel_write:
         # Wait for all processes to complete
         for process in processes:
