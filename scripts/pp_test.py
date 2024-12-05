@@ -42,7 +42,9 @@ def parse_args():
     parser.add_argument('-c', '--config', type=str, required=True, help='Path to the YAML configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
     parser.add_argument('-p', '--parallel_write', action='store_true', help='Write files in parallel with multiprocessing')
-    parser.add_argument('-a', '--auto_exptime', action='store_true', help='Enable automatic exposure time mode')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-a', '--auto_exptime', action='store_true', help='Enable automatic exposure time mode')
+    group.add_argument('-v', '--variable_exptime', action='store_true', help='Enable variable exposure time mode')
     parser.add_argument('-C', '--compress', type=str, default=None, required=False, 
                         nargs='?', const='RICE',
                         help='Enable FITS compression (RICE, GZIP, PLIO, None)')
@@ -88,6 +90,9 @@ def main():
         
     if args.auto_exptime:
         logger.info(f"Enable automatic exposure time mode")
+
+    if args.variable_exptime:
+        logger.info(f"Enable variable exposure time mode")
 
     # Now you can access the configuration data
     cameras = config.get('cameras', {})
@@ -264,16 +269,20 @@ def main():
         frame_got_data_time = time.perf_counter()
         frame_end_datetime = datetime.now(timezone.utc) 
         if data is not None:
-            filename = str(f'frame{frames_count:06d}.fits')
+            # ## collect changing params before creating header
+            if args.variable_exptime or args.auto_exptime:
+                exp_time_tupple = cam.get_control_value(cam_id, 'EXPOSURE')
+                exp_time_us_int = int(round(get_quantity_value(exp_time_tupple[0], unit=u.us)))
             start_date = frame_start_datetime.replace(microsecond=int((frame_start_time % 1) * 1e6))
             end_date = start_date + timedelta(microseconds=exp_time_us_int)
             exp_time = exp_time_us_int / 1e6
-            # end_date = frame_end_datetime.replace(microsecond=int((frame_got_data_time % 1) * 1e6))
             iso_start_date = start_date.isoformat(timespec='milliseconds').replace('+00:00', '')
             iso_end_date = end_date.isoformat(timespec='milliseconds').replace('+00:00', '')
-            exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
-            exp_time_us_int = int(round(get_quantity_value(exp_time[0], unit=u.us)))
-            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}  ExpTime: {exp_time_us_int}]')
+
+            logger.debug(f'ISO frame start: {iso_start_date}  end: {iso_end_date}  temp: {temp_C}  ExpTime: {exp_time}')
+
+            filename = str(f'frame{frames_count:06d}.fits')
+
             header = {
                        'FILE': filename,
                        'TEST': True,
@@ -295,6 +304,18 @@ def main():
                        'YPIXSZ': pixel_size,
                        'CCD_TEMP': get_quantity_value(temp_C, unit=u.deg_C)
                      }
+
+            # vary the exposure time
+            # this is just super dummy simple placeholder for some meaningful
+            # algorithm, to check that the exposure time is actually changing
+            if args.variable_exptime:
+                if(exp_time_us_int < 5000):
+                    exp_time_us_int = device['exposure_time']
+                else:
+                    exp_time_us_int -= 2000
+                cam.set_control_value(cam_id, 'EXPOSURE', exp_time_us_int)
+
+            # ## write frame into file
             full_path = os.path.join(output_folder, filename)
 
             # ## using panoptes.utils.images.fits as fits_utils
