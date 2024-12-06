@@ -56,3 +56,4 @@ python3 pp_test.py -d -c ../config/ASI183MM_jetson005.yaml
 There is a number of configuration files in the config subdirectory, for both 
 ASI1600 ZWO camera connected to DFN system embedded PC inthe DFN lab on Curtin campus, and for ASI183 cameras 
 connected to Jetson computers of the Huntsman telecope. 
+(There are comments describing the parameters in yaml file [ASI183MM_jetson005.yaml](config/ASI183MM_jetson005.yaml) where needed.)
