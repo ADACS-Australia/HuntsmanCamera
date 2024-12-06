@@ -51,7 +51,26 @@ modify camera serial number etc in yaml and use the script
 ```
 cd scripts
 python3 pp_test.py -h
+usage: pp_test.py [-h] -c CONFIG [-d] [-p] [-a | -v] [-C [COMPRESS]]
+
+ZWO ASI camera video record demo script
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        Path to the YAML configuration file
+  -d, --debug           Enable debug logging
+  -p, --parallel_write  Write files in parallel with multiprocessing
+  -a, --auto_exptime    Enable automatic exposure time mode
+  -v, --variable_exptime
+                        Enable variable exposure time mode
+  -C [COMPRESS], --compress [COMPRESS]
+                        Enable FITS compression (RICE, GZIP, PLIO, None)
+---
+
 python3 pp_test.py -d -c ../config/ASI183MM_jetson005.yaml
+python3 pp_test.py -p -C -c  ../config/ASI183MM_jetson005_nfs.yaml
+python3 pp_test.py -a -d -C RICE -p -c ../config/ASI183MM_jetson005.yaml
 ```
 There is a number of configuration files in the config subdirectory, for both 
 ASI1600 ZWO camera connected to DFN system embedded PC inthe DFN lab on Curtin campus, and for ASI183 cameras 
