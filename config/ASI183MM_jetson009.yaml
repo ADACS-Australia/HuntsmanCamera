@@ -1,6 +1,6 @@
 cameras:
   devices:
-    - name: "Huntsman_jetson09_ASI193MM"
+    - name: "Huntsman_jetson009_ASI183MM"
       # 4656 x 3520
       #model: huntsman.pocs.camera.zwo
       serial_number: "0e2c420013090900"
