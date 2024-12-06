@@ -1,24 +1,33 @@
 cameras:
   devices:
-    - name: "Huntsman_jetson005_ASI193MM"
-      # 4656 x 3520
-      #model: huntsman.pocs.camera.zwo
+    - name: "Huntsman_jetson005_ASI183MM"
+      # model: huntsman.pocs.camera.zwo
+      ## serial numbers can be found in central huntsman config
+      ## https://github.com/AstroHuntsman/huntsman-config/blob/main/conf_files/pocs/huntsman.yaml
       serial_number: "2d194b0013090900"
       target_temperature: 0
       temperature_tolerance: 3
       gain: 100
-      num_frames: 60
+      num_frames: 50
       # exposure time in microseconds
       exposure_time: 45000
       # RAW8 (default) or RAW16
       image_type: "RAW16"
       # crop parameters
+      # 4656 x 3520
       use_crop: False
       size_x: 800
       size_y: 800
       start_x: 400
       start_y: 400
+      ## this is local NVMe mounted as
+      ## sudo mount /dev/nvme0n1p1  /mnt/fast
+      ## (mkdir && chmod /mnt/fast first)
       # output_folder: "/mnt/fast/home/mcu/ZWO_data"
-      output_folder: "."
-      # pixel binning - HW binning 1 (=none) or 2
+      ## this is remote folder on central computer, nfs mounted as /var/hunstman/images
+      output_folder: "/var/huntsman/images/demo"
+      # output_folder: "/var/hunstman/images/gazak"
+      ## just current folder
+      # output_folder: .
+      ## pixel binning - HW binning 1 (=none) or 2
       pix_binning: 2
