@@ -87,7 +87,7 @@ def main():
 
     if args.parallel_write:
         logger.info(f"Write files in parallel threads")
-        
+
     if args.auto_exptime:
         logger.info(f"Enable automatic exposure time mode")
 
@@ -156,12 +156,11 @@ def main():
     logger.debug(f'Gain={gain}')
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     logger.debug(f'Exposure_time = {exp_time})')
-    
+
     hw_bin = cam.get_control_value(cam_id, 'HARDWARE_BIN')
     logger.debug(f'Hardware binning={hw_bin}')
 
-
-    logger.info(f'----- Camera configuration and read back to verify -----')
+    logger.info('----- Camera configuration and read back to verify -----')
 
     # activate HW binning
     cam.set_control_value(cam_id, 'HARDWARE_BIN', True)
@@ -259,7 +258,7 @@ def main():
 
     output_folder = device['output_folder']
     entered_loop = False
-            
+
     while frames_count < num_frames:
         temp = cam.get_control_value(cam_id, 'TEMPERATURE')
         temp_C = temp[0] / 10.0
@@ -309,7 +308,7 @@ def main():
             # this is just super dummy simple placeholder for some meaningful
             # algorithm, to check that the exposure time is actually changing
             if args.variable_exptime:
-                if(exp_time_us_int < 5000):
+                if (exp_time_us_int < 5000):
                     exp_time_us_int = device['exposure_time']
                 else:
                     exp_time_us_int -= 2000
@@ -349,7 +348,7 @@ def main():
     end_time = time.perf_counter()
 
     cam.stop_video_capture(cam_id)
-    
+
     # wrap line if printed any '#' characters for limiting number or processes
     if entered_loop:
         print('')
@@ -366,7 +365,7 @@ def main():
 
     exp_time = cam.get_control_value(cam_id, 'EXPOSURE')
     logger.info(f'Exposure_time = {exp_time}')
-    
+
     if args.parallel_write:
         # Wait for all processes to complete
         for process in processes:
