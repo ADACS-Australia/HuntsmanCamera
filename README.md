@@ -37,7 +37,13 @@ conda create -y -q -n huntsman python=3.9 mamba
 conda activate huntsman
 pip install panoptes-pocs
 pip install matplotlib
+...
+conda list | grep panoptes
+panoptes-pocs             0.7.8                    pypi_0    pypi
+panoptes-utils            0.2.43                   pypi_0    pypi
 ```
+_note: panuptes-utils seems to be later version than 0.2.35, which can be forced, but there are no apparent issues with the most recent available._
+
 Since the camera demo app incudes compression functionality, fitsio package is needed.
 The pip command below builds binary wheel of cfistio, plus one needs to install an OS lib for dependance:
 ```
