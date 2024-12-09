@@ -1,12 +1,14 @@
-On a Jetson computer: 
+# Instruction how to install and use Hutsman camera video mode demo/test script
 
-(Martin using user mcu)
+On a Huntsman Jetson computer: 
+
+_(Martin using user mcu)_
 
 create ed25519 key pair under user xxx
 ```
    ssh-keygen -t ed25519
 ```
-Put key on Github
+Put the pub key on Github for the corresponding user.
 
 
 Instal conda forge
@@ -40,14 +42,14 @@ The panoptes-config-server is not needed on Hunstan's Jetsons - alreay running
 # /home/mcu/conda/envs/huntsman/bin/panoptes-config-server run --config-file config/zwo_video_demo.yaml
 ```
 
-checkout repo with the video demo script
+Checkout repo with the video demo script
 ```
 cd ~
 git clone git@github.com:ADACS-Australia/HuntsmanCamera.git
 cd HuntsmanCamera
 ```
 
-modify camera serial number etc in yaml and use the script
+Modify camera serial number etc in yaml and use the script
 ```
 cd scripts
 python3 pp_test.py -h
