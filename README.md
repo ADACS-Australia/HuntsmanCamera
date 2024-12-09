@@ -1,6 +1,6 @@
 ## pp test
 A Huntsman telescope video mode test/demo script [pp_test.py](scripts/pp_test.py) using Panoptes POCS ZWO ASI astronomical cameras driver [libasi](https://github.com/panoptes/POCS/blob/develop/src/panoptes/pocs/camera/libasi.py).
-The libasi is a python ctypes wrapper for the proprietary closed source ASI astronomical cameras drive provided for [download](https://dl.zwoastro.com/software?app=DeveloperCameraSdk&platform=windows86&region=Overseas) by the camera manufacturer [ZWO](https://www.zwoastro.com/software/) -> OTHERS -> Fore Developers.
+The libasi is a python ctypes wrapper for the proprietary closed source ASI astronomical cameras drive provided for [download](https://dl.zwoastro.com/software?app=DeveloperCameraSdk&platform=windows86&region=Overseas) by the camera manufacturer [ZWO](https://www.zwoastro.com/software/) -> OTHERS -> For Developers.
 
 The [libasi.py](scripts/libasi.py) was copied here from the upstream panopes/pocs repo (release 0.2.35) and modified (eg bug fixed and updated for later version of the underlaying binary lib.).
 
